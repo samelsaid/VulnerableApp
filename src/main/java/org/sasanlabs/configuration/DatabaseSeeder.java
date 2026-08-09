@@ -3,16 +3,15 @@ package org.sasanlabs.configuration;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.stereotype.Component;
 
 /**
- * Runs all {@link ModuleSeeder} implementations once the application is ready, ensuring the
+ * Runs all {@link ModuleSeeder} implementations while the context is still refreshing, ensuring the
  * database is populated before the app accepts requests.
  */
 @Component
-public class DatabaseSeeder {
+public class DatabaseSeeder implements SmartInitializingSingleton {
 
     private static final transient Logger LOGGER = LogManager.getLogger(DatabaseSeeder.class);
 
@@ -23,8 +22,15 @@ public class DatabaseSeeder {
         this.seeders = seeders;
     }
 
-    @EventListener(ApplicationReadyEvent.class) // Runs when  application is ready
-    public void seedAllModules() throws Exception {
+    /**
+     * ApplicationReadyEvent is published after the servlet container has already bound its port,
+     * so seeding used to overlap with live traffic. Bcrypt-hashing the vault takes seconds, and
+     * every request arriving in that window reached a level whose table was still empty and got
+     * an HTTP 500 back. Running from {@code afterSingletonsInstantiated} finishes inside the
+     * refresh, before the connector opens, which is what this class already claimed to do.
+     */
+    @Override
+    public void afterSingletonsInstantiated() {
         LOGGER.info("Starting Global Database Seeding");
 
         for (ModuleSeeder seeder : seeders) {
@@ -44,7 +50,8 @@ public class DatabaseSeeder {
                         seeder.getModuleName(),
                         seeder.getModuleTable(),
                         e);
-                throw e;
+                throw new IllegalStateException(
+                        "Aborting startup: seeding failed for " + seeder.getModuleName(), e);
             }
         }
 
