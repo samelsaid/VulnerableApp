@@ -6,7 +6,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.sql.DataSource;
 import org.sasanlabs.internal.utility.LevelConstants;
 import org.sasanlabs.service.vulnerability.fileupload.UnrestrictedFileUpload;
@@ -30,6 +33,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.DataSourceInitializer;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.MultipartResolver;
 import org.springframework.web.multipart.commons.CommonsMultipartResolver;
 import org.springframework.web.multipart.support.MultipartFilter;
@@ -190,16 +194,37 @@ public class VulnerableAppConfiguration {
     /**
      * Bounds the size of a multipart upload.
      *
-     * <p>The level 9 path used to be handed a resolver with {@code setMaxUploadSize(-1)} and
-     * {@code setMaxUploadSizePerFile(-1)}, which is unlimited. A size check inside the controller
-     * cannot help there: the resolver has already buffered the whole request before the handler
-     * runs, so a single large POST consumes the memory and disk regardless of what the handler
-     * then decides. The ceiling is applied where the buffering happens.
+     * <p>The level 9 path used to be handed a resolver with {@code setMaxUploadSize(-1)} and {@code
+     * setMaxUploadSizePerFile(-1)}, which is unlimited. A size check inside the controller cannot
+     * help there: the resolver has already buffered the whole request before the handler runs, so a
+     * single large POST consumes the memory and disk regardless of what the handler then decides.
+     * The ceiling is applied where the buffering happens.
+     *
+     * <p>Because the bound is enforced in the filter, an oversized request is refused before any
+     * handler runs and the {@link MultipartException} would otherwise leave the filter chain as a
+     * server error. It is answered here instead, with the same body the upload handlers use for
+     * input they will not store, so a client sees a rejected upload rather than a broken endpoint.
      */
     @Bean
     @Order(0)
     public MultipartFilter multipartFilter() {
         class BoundedMultipartFilter extends MultipartFilter {
+            @Override
+            protected void doFilterInternal(
+                    HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+                    throws ServletException, IOException {
+                try {
+                    super.doFilterInternal(request, response, chain);
+                } catch (MultipartException e) {
+                    response.setStatus(HttpServletResponse.SC_OK);
+                    response.setContentType("application/json");
+                    response.setCharacterEncoding("UTF-8");
+                    response.getWriter()
+                            .write("{\"content\":\"Input is invalid\",\"isValid\":false}");
+                    response.getWriter().flush();
+                }
+            }
+
             @Override
             protected MultipartResolver lookupMultipartResolver(HttpServletRequest request) {
                 if (MAX_FILE_UPLOAD_SIZE_OVERRIDE_PATHS.contains(request.getServletPath())) {
