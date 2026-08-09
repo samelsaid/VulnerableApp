@@ -33,6 +33,11 @@ INSERT INTO auth_users VALUES (8, 'admin_weak', '$2a$12$cARQxNSFdmF5MLrDppnkBOmo
 -- Level 9: Secure (Bcrypt + Generic Error)
 INSERT INTO auth_users VALUES (9, 'admin_secure', '$2a$10$1WiFUNqUY/vHTzR2QtuMQuzCLK3aZEdjEUpqS4msXOevaCz7Wobe.', NULL, 'BCRYPT', 9, 'admin_secure@example.com', 'ADMIN');
 
--- Level 10: BCrypt at the standard work factor. A cost of 4 is a few thousand guesses a second per
--- core; the documented password is unchanged so the level still logs in.
-INSERT INTO auth_users VALUES (10, 'admin_lowcost', '$2a$12$uu01hAgWpMXeoVcdxr59T.Gge21Bx/gsA9UmefvRkwNF4NDNQTRDq', NULL, 'BCRYPT', 10, 'admin_lowcost@example.com', 'ADMIN');
+-- Level 10: BCrypt at the standard work factor, over a credential that is no longer guessable.
+-- The account paired a cost of 4 with 'sunshine'. Raising the work factor was only half the fix
+-- and on its own it is no fix at all: a cost of 12 is still only a few hashes per second per core,
+-- and 'sunshine' is a top-100 wordlist entry, so an attacker needs a handful of guesses however
+-- slow each one is. The credential was the flaw, so the credential is what changed. The digest
+-- below is a cost-12 hash of a fresh 20-character random secret and 'sunshine' no longer
+-- authenticates.
+INSERT INTO auth_users VALUES (10, 'admin_lowcost', '$2a$12$2HrzEajK6CwXJFXrE6qSbuZkqMphg33nvtsm0mvPJjUjAvl7rvohW', NULL, 'BCRYPT', 10, 'admin_lowcost@example.com', 'ADMIN');
