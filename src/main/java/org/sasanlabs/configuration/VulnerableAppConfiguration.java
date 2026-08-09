@@ -46,6 +46,8 @@ public class VulnerableAppConfiguration {
     private static final String I18N_MESSAGE_FILE_LOCATION = "classpath:i18n/messages";
     private static final String ATTACK_VECTOR_PAYLOAD_PROPERTY_FILES_LOCATION_PATTERN =
             "classpath:/attackvectors/*.properties";
+    private static final long MAX_UPLOAD_SIZE_IN_BYTES = 2L * 1024L * 1024L;
+
     private static final List<String> MAX_FILE_UPLOAD_SIZE_OVERRIDE_PATHS =
             Arrays.asList(
                     "/" + UnrestrictedFileUpload.CONTROLLER_PATH + "/" + LevelConstants.LEVEL_9);
@@ -186,20 +188,24 @@ public class VulnerableAppConfiguration {
     }
 
     /**
-     * Customized MultipartFilter bean disables default max upload size for multipart files and
-     * their overall requests, for select paths. See {@link
-     * UnrestrictedFileUpload#getVulnerablePayloadLevel10()} for usage.
+     * Bounds the size of a multipart upload.
+     *
+     * <p>The level 9 path used to be handed a resolver with {@code setMaxUploadSize(-1)} and
+     * {@code setMaxUploadSizePerFile(-1)}, which is unlimited. A size check inside the controller
+     * cannot help there: the resolver has already buffered the whole request before the handler
+     * runs, so a single large POST consumes the memory and disk regardless of what the handler
+     * then decides. The ceiling is applied where the buffering happens.
      */
     @Bean
     @Order(0)
     public MultipartFilter multipartFilter() {
-        class MaxUploadSizeOverrideMultipartFilter extends MultipartFilter {
+        class BoundedMultipartFilter extends MultipartFilter {
             @Override
             protected MultipartResolver lookupMultipartResolver(HttpServletRequest request) {
                 if (MAX_FILE_UPLOAD_SIZE_OVERRIDE_PATHS.contains(request.getServletPath())) {
                     CommonsMultipartResolver multipart = new CommonsMultipartResolver();
-                    multipart.setMaxUploadSize(-1);
-                    multipart.setMaxUploadSizePerFile(-1);
+                    multipart.setMaxUploadSize(MAX_UPLOAD_SIZE_IN_BYTES);
+                    multipart.setMaxUploadSizePerFile(MAX_UPLOAD_SIZE_IN_BYTES);
                     return multipart;
                 } else {
                     // returns default implementation
@@ -207,7 +213,6 @@ public class VulnerableAppConfiguration {
                 }
             }
         }
-        ;
-        return new MaxUploadSizeOverrideMultipartFilter();
+        return new BoundedMultipartFilter();
     }
 }
