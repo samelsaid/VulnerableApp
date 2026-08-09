@@ -23,11 +23,11 @@ public class DatabaseSeeder implements SmartInitializingSingleton {
     }
 
     /**
-     * ApplicationReadyEvent is published after the servlet container has already bound its port,
-     * so seeding used to overlap with live traffic. Bcrypt-hashing the vault takes seconds, and
-     * every request arriving in that window reached a level whose table was still empty and got
-     * an HTTP 500 back. Running from {@code afterSingletonsInstantiated} finishes inside the
-     * refresh, before the connector opens, which is what this class already claimed to do.
+     * ApplicationReadyEvent is published after the servlet container has already bound its port, so
+     * seeding used to overlap with live traffic. Bcrypt-hashing the vault takes seconds, and every
+     * request arriving in that window reached a level whose table was still empty and got an HTTP
+     * 500 back. Running from {@code afterSingletonsInstantiated} finishes inside the refresh,
+     * before the connector opens, which is what this class already claimed to do.
      */
     @Override
     public void afterSingletonsInstantiated() {
