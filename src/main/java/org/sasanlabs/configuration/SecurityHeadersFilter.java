@@ -24,9 +24,14 @@ import org.springframework.stereotype.Component;
  * <p>{@code nosniff} goes with them: several levels reflect caller-controlled content, and without
  * it a browser may decide a response is HTML regardless of the declared content type.
  *
- * <p>The filter runs before the handler, so a handler that adds its own value ends up alongside
- * this one. That is harmless for these four: duplicate identical values collapse, and a browser
- * given two Content-Security-Policy headers enforces both, so the stricter {@code 'none'} wins.
+ * <p>This filter must be the <em>only</em> place these headers are set. It runs before the handler,
+ * and a handler that adds its own value has it appended rather than replaced — and a browser that
+ * is given {@code X-Frame-Options} more than once ignores the header completely, which turns
+ * framing protection into no framing protection at all. The clickjacking handlers used to set it as
+ * well and every one of their responses carried it twice. Setting it here also covers the responses
+ * no handler ever produces: a request with the wrong method, an OPTIONS probe, an error page, and
+ * the level's own HTML served straight off the static resource handler. An attacker frames a URL,
+ * not a handler.
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 10)
