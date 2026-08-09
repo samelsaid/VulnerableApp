@@ -160,7 +160,7 @@ function maybeLoadReferrerLeakDemo(level) {
   }
 
   externalCard.classList.remove("hidden");
-  externalImage.referrerPolicy = "unsafe-url";
+  externalImage.referrerPolicy = "no-referrer";
   externalImage.src =
     "https://dummyimage.com/320x120/e5e7eb/374151.png&text=Third-party+image";
 }
