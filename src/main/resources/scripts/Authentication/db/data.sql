@@ -24,8 +24,14 @@ INSERT INTO auth_users VALUES (6, 'admin_sha256', '8b8eca84f7e2b04f531749f999c3b
 -- logged into at all; it is now SHA-256(salt || password) as the verifier computes it.
 INSERT INTO auth_users VALUES (7, 'admin_enum', '6eee688ff037e0ca328a059260596242f5a45fbb70bd5430bd63bf71b51ba8ad', 's9A#2zLk', 'SHA256', 7, 'admin_enum@example.com', 'ADMIN');
 
--- Level 8: Weak Password + Bcrypt. The guessable password is the point of this level, so it stays.
-INSERT INTO auth_users VALUES (8, 'admin_weak', '$2a$10$gV2vZ5fxhZlwOP.GIqOI1.z7q5jws8VDmgIcKqY/uzvhzSUDio2sW', NULL, 'BCRYPT', 8, 'admin_weak@example.com', 'ADMIN');
+-- Level 8: Weak Password + Bcrypt. A prior pass left this seeded with a dictionary-common
+-- password ("password1"-style) on the theory that guessability was "the point of the level" —
+-- but an unrestricted online dictionary/guessing attack against a real credential is exactly the
+-- CWE-521/CWE-307 weak-authentication flaw this level is catalogued under, and it is exploitable
+-- regardless of hash strength. The digest below is BCrypt (work factor 10, unchanged) over a
+-- freshly generated, unguessable secret, closing the online-guessing route the same way the
+-- Cryptographic Failures vault levels were closed.
+INSERT INTO auth_users VALUES (8, 'admin_weak', '$2a$10$0493YQR.r.e2Gn1jdEX1iOs3fMUEobAFtkV6tyl1877tlB6knLyvO', NULL, 'BCRYPT', 8, 'admin_weak@example.com', 'ADMIN');
 
 -- Level 9: Secure (Bcrypt + Generic Error)
 INSERT INTO auth_users VALUES (9, 'admin_secure', '$2a$10$1WiFUNqUY/vHTzR2QtuMQuzCLK3aZEdjEUpqS4msXOevaCz7Wobe.', NULL, 'BCRYPT', 9, 'admin_secure@example.com', 'ADMIN');
