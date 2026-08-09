@@ -1,7 +1,5 @@
 package org.sasanlabs.internal.utility;
 
-import java.util.Base64;
-
 public class EncodingUtils {
     public static String bytesToHex(byte[] data) {
         StringBuilder builder = new StringBuilder(data.length * 2);
@@ -11,7 +9,7 @@ public class EncodingUtils {
         return builder.toString();
     }
 
-    public static String encodeBase64(String rawText) {
-        return Base64.getEncoder().encodeToString(rawText.getBytes());
-    }
+    // encodeBase64 used to live here. Base64 is a transport encoding with no key and no secret,
+    // and the only thing a helper named like this encourages is treating it as though it were
+    // encryption. Nothing calls it any more, so it is gone rather than merely unused.
 }
